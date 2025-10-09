@@ -4,6 +4,7 @@ import trashIcon from './assets/trash.svg';
 
 export default function App() {
   const [input, setInput] = useState("");
+  const [date, setDate] = useState("");
   const [todos, setTodos] = useState(() => {
     const stored = localStorage.getItem("todos");
     return stored ? JSON.parse(stored) : [];
@@ -13,14 +14,23 @@ export default function App() {
     localStorage.setItem("todos", JSON.stringify(todos));
   }, [todos]);
 
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editingText, setEditingText] = useState("");
+  const [editingDate, setEditingDate] = useState("");
+
   function handleChange(e) {
     setInput(e.target.value);
   }
 
+  function handleDateChange(e) {
+    setDate(e.target.value);
+  }
+
   function handleClick() {
     if (input.trim() === "") return;
-    setTodos(prev => [...prev, { text: input.trim(), completed: false }]);
+    setTodos(prev => [...prev, { text: input.trim(), completed: false, dueDate: date }]);
     setInput("");
+    setDate("");
   }
 
   function handleDelete(indexToDelete) {
@@ -35,50 +45,50 @@ export default function App() {
     );
   }
 
-  function handleEdit(indexToEdit, newText) {
+  function handleEdit(index, newText, newDate) {
     setTodos(prev =>
-      prev.map((todo, index) =>
-        index === indexToEdit ? { ...todo, text: newText } : todo
+      prev.map((todo, idx) =>
+        idx === index ? { ...todo, text: newText, dueDate: newDate } : todo
       )
     );
+    setEditingIndex(null);
+    setEditingText("");
+    setEditingDate("");
   }
 
   function handleKeyDown(e) {
     if (e.key === 'Enter') {
-      handleClick();
+      if (editingIndex !== null) {
+        handleEdit(editingIndex, editingText, editingDate);
+      } else {
+        handleClick();
+      }
     }
-  }
-
-  const [editingIndex, setEditingIndex] = useState(null);
-  const [editingText, setEditingText] = useState("");
-
-  function startEditing(index) {
-    setEditingIndex(index);
-    setEditingText(todos[index].text);
-  }
-
-  function saveEdit(index) {
-    if (editingText.trim() === "") return;
-    handleEdit(index, editingText.trim());
-    setEditingIndex(null);
-    setEditingText("");
   }
 
   return (
     <div className="container">
-      <div className="todoApp">  
+      <div className="todoApp">
         <h1>Todo List</h1>
         <div className="inputContainer">
           <input
             type="text"
             value={input}
             className="inputBox"
-            onChange={handleChange} 
+            onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder="Add todo"
             autoFocus
-          /> 
-          <button onClick={handleClick} className="button" aria-label="Add todo">Add</button> 
+          />
+          <input
+            type="date"
+            value={date}
+            onChange={handleDateChange}
+            className="inputBox"
+          />
+          <button onClick={handleClick} className="button" aria-label="Add todo">
+            Add
+          </button>
         </div>
 
         <ul className="listContainer">
@@ -86,7 +96,7 @@ export default function App() {
           {todos.map((todo, index) => (
             <li key={index} className="todoItem">
               {editingIndex === index ? (
-                <div style={{ display: "flex", flex: 1, gap: "10px" }}>
+                <div style={{ display: "flex", gap: "10px", flex: 1 }}>
                   <input
                     type="text"
                     value={editingText}
@@ -94,9 +104,15 @@ export default function App() {
                     className="inputBox"
                     autoFocus
                   />
+                  <input
+                    type="date"
+                    value={editingDate}
+                    onChange={(e) => setEditingDate(e.target.value)}
+                    className="inputBox"
+                  />
                   <button
-                    onClick={() => saveEdit(index)}
                     className="button"
+                    onClick={() => handleEdit(index, editingText, editingDate)}
                   >
                     Save
                   </button>
@@ -104,10 +120,10 @@ export default function App() {
               ) : (
                 <>
                   <label className="todoLabel">
-                    <input 
-                      type="checkbox" 
-                      checked={todo.completed} 
-                      onChange={() => toggleCompleted(index)} 
+                    <input
+                      type="checkbox"
+                      checked={todo.completed}
+                      onChange={() => toggleCompleted(index)}
                       className="checkbox"
                       aria-label={`Mark todo "${todo.text}" as completed`}
                     />
@@ -115,17 +131,23 @@ export default function App() {
                       {todo.text}
                     </span>
                   </label>
+                  {todo.dueDate && (
+                    <span className="dueDate">📅 {todo.dueDate}</span>
+                  )}
                   <div style={{ display: "flex", gap: "8px" }}>
                     <button
-                      onClick={() => startEditing(index)}
                       className="button"
-                      aria-label={`Edit todo: ${todo.text}`}
+                      onClick={() => {
+                        setEditingIndex(index);
+                        setEditingText(todo.text);
+                        setEditingDate(todo.dueDate || "");
+                      }}
                     >
                       Edit
                     </button>
-                    <button 
-                      onClick={() => handleDelete(index)} 
-                      className="deleteBtn" 
+                    <button
+                      onClick={() => handleDelete(index)}
+                      className="deleteBtn"
                       aria-label={`Delete todo: ${todo.text}`}
                     >
                       <img src={trashIcon} alt="Delete icon" />
@@ -136,7 +158,7 @@ export default function App() {
             </li>
           ))}
         </ul>
-      </div> 
+      </div>
     </div>
   );
 }
